@@ -1,0 +1,18 @@
+{
+  "mcp": {
+    "servers": {
+      "native-modeling": {
+        "type": "local",
+        "disabled": false,
+        "command": [
+          "C:/Path/To/Python312/python.exe",
+          "C:/Path/To/PhyXiCATIAAgent/app/native_mcp.py"
+        ],
+        "environment": {
+          "PHYXI_NATIVE_WORKSPACE": "C:/Path/To/workspace",
+          "PHYXI_NATIVE_GATE": "C:/Path/To/workspace/native-modeling/execution.sqlite"
+        }
+      }
+    }
+  }
+}

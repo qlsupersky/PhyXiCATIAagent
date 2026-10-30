@@ -1,0 +1,5 @@
+simplecadapi[editor]==2.2.1
+tomli>=2; python_version < "3.11"
+matplotlib>=3.8
+mcp==1.26.0
+pywin32>=310; sys_platform == "win32"
