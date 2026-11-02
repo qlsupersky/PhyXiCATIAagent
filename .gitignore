@@ -42,3 +42,18 @@ __marimo__/
 .marimo/
 *.pickle
 *.pkl
+
+# Native embedded build and browser profile data
+*.dll
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.nupkg
+embedded/caa/win_b64/
+embedded/caa/*/ImportedInterfaces/
+embedded-webview2/
+webview2-profile*/
+embedded-private.ini

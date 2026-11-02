@@ -1,0 +1,3 @@
+PhyXiOpen.Title = "PhyXi Native Modeling";
+PhyXiOpen.ShortHelp = "Open the embedded PhyXi workspace";
+PhyXiOpen.LongHelp = "Natural-language native modeling, image input and actual MCP feedback inside CATIA.";

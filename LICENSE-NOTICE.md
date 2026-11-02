@@ -16,6 +16,8 @@ MIT 许可证全文见 [bin/OpenCode-LICENSE.txt](bin/OpenCode-LICENSE.txt)。Gi
 
 ## Python 与 CAD 依赖
 
+实验内嵌宿主使用官方 NuGet `Microsoft.Web.WebView2 1.0.2903.40`，SDK 与 Loader 按 Microsoft 包内许可独立取得，未纳入 Git 或现有 0.7.0 Release。MinGW 编译使用其运行库与运行时例外，发布二进制前须连同依赖许可检查。CAA 候选源码需用户自己获得匹配 CATIA 的 SDK/RADE 与构建授权；本仓库不分发 CAA 商业接口或运行库。
+
 MCP Python SDK、pywin32、SimpleCADAPI、marimo、matplotlib 及传递依赖通过 pip 独立安装，许可证以安装包的 LICENSE / metadata 为准。OpenCascade、VTK 等许可证不因本适配代码而改变。
 
 ## 第二套 MCP
