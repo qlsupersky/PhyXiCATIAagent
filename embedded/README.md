@@ -6,6 +6,8 @@
 
 已阅读用户提供的 CAA/RADE 环境搭建教程并核对本机版本，见 [教程核对记录](TUTORIAL-REVIEW.md)。其旧版 VS 对应表不能直接用作 B33 的配置依据。
 
+2026-11-02 后续已完成 VS2019 Build Tools 的 ATL/MFC 续装，并通过实际 x64 编译、链接和运行验证。CAA/RADE 介质与 B33 官方兼容组合仍未取得；详见 [开发环境状态与获取清单](ENVIRONMENT-STATUS.md)。
+
 **这一步是通用工作区 Add-in + 内部 MDI 面板原型，并未完成新的 Start 菜单独立工作台或可停靠侧栏。** CAA 对象生命周期、资源注册、MDI 焦点及版本兼容性均需在真实 SDK 编译和 CATIA 加载后验证。原生宿主测试窗口不是 CATIA，所有截图与结果明确标注其范围。
 
 ```mermaid
