@@ -1,6 +1,6 @@
 # CATIA 内嵌工作区原型（实验开发中）
 
-**当前尚未在 CATIA 内完成加载验证，不能作为可用的 CAA 工作台安装。** 本机只有 CATIA V5-6R2023 B33 SP4 运行环境，未找到匹配的 CAA 公开接口头文件、关键导入库、mkmk 及已启用的 MSVC 开发环境。0.7.0 现有安装版和 Release 保持不变。
+**当前尚未在 CATIA 内完成加载验证，不能作为可用的 CAA 工作台安装。** 本机有 CATIA V5-6R2023 B33 SP4 运行环境，未找到匹配的 CAA 公开接口头文件、关键导入库及 mkmk。通用 MSVC x64 与 Windows SDK 已通过实际构建测试，但 B33 官方编译器兼容矩阵尚未确认。0.7.0 现有安装版和 Release 保持不变。
 
 本目录实现了实际可编译运行的原生 WebView2 子控件宿主，以及待在匹配 SDK 下编译的 CAA 通用工作区工具栏/MDI 面板候选源码。入口设计为在 CATIA 内点击工具栏按钮，界面创建在 CNEXT 同一进程中的 MDI 子窗口里；不使用 CATScript 启动界面，不把 Electron 或浏览器外窗重挂到 CATIA。
 
@@ -23,7 +23,7 @@ flowchart LR
 
 | 项目 | 本次结果 |
 |---|---|
-| 原生宿主编译 | TDM-GCC 10.3 x64 编译成功，使用扁平 Windows C ABI 与 CAA 隔离 |
+| 原生宿主编译 | TDM-GCC 10.3 与 MSVC 19.29.30159 x64 均编译成功；MSVC 使用 Windows SDK 10.0.19041.0；扁平 Windows C ABI 与 CAA 隔离 |
 | 真正的子控件 | 在独立开发测试宿主中验证 WS_CHILD、同进程、同 UI STA；拒绝跨进程和跨线程挂载 |
 | 后端启动 | 隐藏 Python 进程，进程私有管道交接本地地址和令牌，限定继承句柄 |
 | 实际界面 | WebView2 内 HTTP 200，原有 0.7.0 页面、图像预览/清空、多步骤输入通过 |
@@ -46,7 +46,7 @@ flowchart LR
 
 ## 构建原生宿主
 
-需 Windows x64、TDM-GCC/MinGW-w64，及另行安装的 WebView2 Evergreen Runtime。第三方 SDK 通过官方 NuGet 单独获取，不在 Git 中捆绑。
+需 Windows x64、TDM-GCC/MinGW-w64 或 MSVC x64 开发环境，及另行安装的 WebView2 Evergreen Runtime。第三方 SDK 通过官方 NuGet 单独获取，不在 Git 中捆绑。
 
 - 包：`Microsoft.Web.WebView2`，版本 `1.0.2903.40`
 - 地址：`https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.2903.40/microsoft.web.webview2.1.0.2903.40.nupkg`
@@ -60,6 +60,17 @@ flowchart LR
 ```
 
 MSVC 构建时使用正式 Windows SDK 中的 EventToken.h；`native/compat/EventToken.h` 仅为已验证 MinGW 构建提供 ABI 值类型。CAA 模块必须使用与 CATIA/CAA 版本匹配的 MSVC/RADE，不能用 MinGW 替代 CAA 编译环境。
+
+在 x64 MSVC Developer Command Prompt 中打开 PowerShell 后，可构建独立原生宿主：
+
+```powershell
+.\embedded\build-host-msvc.ps1 -WebViewSdk C:\Path\To\WebView2Sdk `
+  -OutputDir C:\Path\To\NEW-msvc-native-output
+```
+
+脚本使用 `/MT`、真正的 Windows SDK 和 x64 官方 Loader，拒绝覆盖已有 DLL。已用 MSVC 19.29.30159 + Windows SDK 10.0.19041.0 完成 COM/x64 探针和宿主编译，并在独立开发宿主复测图片预览/清空、多步骤界面、生命周期和 OpenCode 两套 MCP 连接。未发送模型请求或 CAD 调用。**这只验证该原生宿主的工具链，不代表此组合已获 B33/CAA 官方认证，也不代表完整 VS 产品、ATL/MFC 或 CAA 开发环境已安装完成。**
+
+CAA/RADE 的介质、接口库和兼容性资料应从对应产品的正式开发环境取得。参考 [Program Directories](https://www.3ds.com/support/documentation/program-directories)、[Developer Guides](https://www.3ds.com/support/documentation/developer-guides) 与 [软件入口](https://software.3ds.com/)。现有 CATIA 运行安装包中的 RADEInfrastructure 资源包不能作为完整 RADE SDK 使用。
 
 ## CAA 后续构建与部署
 
