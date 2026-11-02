@@ -198,7 +198,15 @@ class OpenCodeLink:
     def _write(path, value):
         temp = path.with_name(path.name + '.tmp-' + uuid.uuid4().hex)
         temp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
-        os.replace(temp, path)
+        # Windows readers/AV may briefly deny replacement. Retrying this local
+        # evidence write never resubmits a model prompt or a CATIA operation.
+        for attempt in range(10):
+            try:
+                os.replace(temp, path)
+                break
+            except PermissionError:
+                if attempt == 9: raise
+                time.sleep(.02)
 
     def _observe(self, pending, rows):
         record = json.loads(pending.read_text(encoding='utf-8'))
@@ -238,7 +246,7 @@ class OpenCodeLink:
         result = self._observe(pending, rows) if pending and pending.exists() else None
         return {'messages': rows, 'text': render_messages(rows), 'pending': bool(pending and pending.exists()), 'completed': result}
 
-    def send(self, text, attachments=(), *, cancel=None, progress=lambda text: None):
+    def send(self, text, attachments=(), *, cancel=None, progress=lambda text: None, observe=lambda rows: None):
         if not text.strip() and not attachments:
             raise ValueError('请输入消息或添加图片')
         if not self.lock.acquire(blocking=False):
@@ -276,6 +284,7 @@ class OpenCodeLink:
             while True:
                 rows = self.messages(mid)
                 progress(render_messages(rows))
+                observe(rows)
                 result = self._observe(pending, rows)
                 if result is not None: return result
                 if cancel is not None and cancel.is_set():

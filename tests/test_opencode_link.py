@@ -147,6 +147,20 @@ class SharedLinkTests(unittest.TestCase):
         self.assertTrue(self.link.calls[0][1].endswith('/interrupt?resume=false'))
         self.assertFalse(self.posts())
 
+    def test_transient_windows_evidence_replace_does_not_resubmit_prompt(self):
+        original=os.replace
+        attempt=0
+        def replace(src,dst):
+            nonlocal attempt
+            attempt+=1
+            if attempt<=2: raise PermissionError('sharing violation')
+            return original(src,dst)
+        with patch('opencode_link.os.replace',side_effect=replace):
+            result=self.link.send('one prompt despite file retry')
+        self.assertEqual(result['outcome'],'succeeded')
+        self.assertEqual(len(self.posts()),1)
+        self.assertGreater(attempt,2)
+
     def test_saved_session_restores_only_in_its_project(self):
         self.link._save_current()
         restored = OpenCodeLink(self.link.workspace, self.link.project)

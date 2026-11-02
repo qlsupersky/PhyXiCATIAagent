@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PhyXi · CATIA 工作台</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside>
+  <div class="brand"><span class="brand-mark">P</span><div>PhyXi<span class="sub">CATIA 智能体工作台</span></div></div>
+  <div class="version">0.7.0 · OpenCode + MCP</div>
+  <button id="connect" class="primary">连接 OpenCode</button>
+  <button id="new">＋ 新建对话</button>
+  <label>当前会话<select id="sessions"><option value="">选择或新建会话</option></select></label>
+  <div class="section-label">模型与执行方式</div>
+  <label>模型<select id="models"><option value="">沿用会话模型</option></select></label>
+  <label>Agent<select id="agents"><option value="">沿用会话 Agent</option></select></label>
+  <label>变体<select id="variants"><option value="">沿用模型变体</option></select></label>
+  <div class="section-label">MCP 连接</div><div id="mcp" class="muted">等待连接</div>
+  <div class="sidebar-bottom"><button id="full">打开完整 OpenCode ↗</button><button id="refresh">刷新已有结果</button><p>原生终端、斜杠命令与差异查看<br>在同一会话继续。</p></div>
+</aside>
+<main>
+  <header><div><span class="eyebrow">CATIA V5 / 工作空间</span><h1>让想法成为原生模型</h1></div><span id="connection" class="badge">未连接</span></header>
+  <div id="project" class="path">连接本机 OpenCode，继续你的项目。</div>
+  <div id="notice" role="status">支持图文输入、连续对话和多步骤工具协作。</div>
+  <section id="messages" aria-label="对话记录"><div class="welcome"><div class="orb">✦</div><h2>从一张图，或一个要求开始</h2><p>描述几何、尺寸和检查要求。智能体可以连续调用多个工具；<br>每一次工具反馈都会保留在右侧。</p></div></section>
+  <section class="composer">
+    <div class="compose-tabs"><button id="chat-tab" class="selected">对话</button><button id="task-tab">多步骤任务</button><span>一次提交 · 持续反馈</span></div>
+    <div id="task-help" hidden>每行写一个目标，按顺序执行。失败时报告已完成与未完成步骤，实际结果以工具核验为准。</div>
+    <div id="attachments"></div>
+    <textarea id="prompt" rows="3" placeholder="例如：按参考图创建五孔制动盘，检查体积并保存原生零件…"></textarea>
+    <div class="compose-actions"><input id="file" type="file" multiple hidden><button id="attach">＋ 图片 / 文件</button><button id="clear">清空附件</button><span class="hint">可粘贴图片 · Ctrl + Enter 发送</span><button id="send" class="primary">发送 ↗</button></div>
+  </section>
+</main>
+<section class="inspector">
+  <div class="section-label">执行反馈</div><h2>工具与步骤</h2>
+  <div id="job-status" class="status-card">暂无执行中的任务</div>
+  <div class="control-row"><button id="stop">停止等待</button><button id="interrupt" class="danger">中止本轮</button></div>
+  <p class="muted small">停止等待不取消已派发的 CAD 调用。状态不明时刷新原会话，不自动重发。</p>
+  <div id="plan-progress"></div>
+  <div id="tools"><div class="empty">工具执行后显示真实状态、返回信息与核验结果。</div></div>
+  <details><summary>原生工具计划示例</summary><pre>catia_plan_run
+request_id: 每次新任务的唯一标识
+steps:
+  - 新建演示零件
+  - 创建草图与特征
+  - 测量实际结果
+  - 保存生成副本
+
+SUCCEEDED 表示步骤正常返回；
+显式检查通过才表示该项核验通过。</pre></details>
+</section>
+<script src="/app.js"></script>
+</body></html>

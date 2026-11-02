@@ -1,7 +1,8 @@
-param(
+﻿param(
     [string]$InstallDir = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PhyXiCATIAAgent\app'),
     [string]$Workspace = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PhyXiCATIAAgent'),
     [string]$Python = '',
+    [string]$DesktopRuntime = '',
     [switch]$SkipDependencies
 )
 $ErrorActionPreference = 'Stop'
@@ -33,7 +34,7 @@ if (Test-Path -LiteralPath (Join-Path $InstallDir 'config.json')) {
     }
 }
 # Preserve every differing installed artifact before replacing it, including old config backups.
-$backupRoot = Join-Path (Split-Path -Parent $source) ('_migration\install-0.6.5-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$backupRoot = Join-Path (Split-Path -Parent $source) ('_migration\install-0.7.0-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 if (Test-Path -LiteralPath $InstallDir) {
     New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
     Get-ChildItem -LiteralPath $InstallDir -Force | Where-Object { $_.Name -ne '__pycache__' } | ForEach-Object {
@@ -60,10 +61,20 @@ foreach ($folder in @('bin','bridge','samples')) {
 foreach ($name in @('native_contract.py','native_gate.py','native_service.py','native_mcp.py','native_runtime.py','native_workflow.py','native_panel.py','native_images.py','native_examples.py','opencode_link.py','opencode_panel.py','OPENCODE-LINK.md','NATIVE-MODELING.md','AUTOMATIC-EXECUTION.md')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $InstallDir $name) -Force
 }
+foreach ($name in @('plan_engine.py','catia_adapter.py','web_backend.py','web_server.py','launch_ui.py','install-desktop.ps1','WEBUI-070.md')) {
+    Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $InstallDir $name) -Force
+}
+foreach ($folder in @('webui','desktop')) {
+    $dest = Join-Path $InstallDir $folder
+    New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    Get-ChildItem -LiteralPath (Join-Path $source $folder) -File | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $dest $_.Name) -Force
+    }
+}
 & $Python -c 'import mcp, win32crypt'
 if ($LASTEXITCODE -ne 0) { throw 'MCP/pywin32 dependencies missing; omit -SkipDependencies to install them.' }
 New-Item -ItemType Directory -Force -Path $Workspace | Out-Null
-$config = @{ python=$Python; workspace=$Workspace; install_dir=$InstallDir; version='0.6.5'; llm_provider='DeepSeek 官方 API'; llm_base_url='https://api.deepseek.com'; llm_model='deepseek-flash'; server_base_url='http://127.0.0.1:8000/v1'; server_model='qwen3.8-base'; llm_temperature=1.0 }
+$config = @{ python=$Python; workspace=$Workspace; install_dir=$InstallDir; version='0.7.0'; llm_provider='DeepSeek 官方 API'; llm_base_url='https://api.deepseek.com'; llm_model='deepseek-flash'; server_base_url='http://127.0.0.1:8000/v1'; server_model='qwen3.8-base'; llm_temperature=1.0 }
 if ($previous) {
     if ($previous.llm_provider) {
         $config.llm_provider=$previous.llm_provider
@@ -71,11 +82,15 @@ if ($previous) {
         if ($previous.llm_base_url) { $config.llm_base_url=$previous.llm_base_url }
         if ($previous.llm_model) { $config.llm_model=$previous.llm_model }
         if ($previous.llm_cc_switch_provider_id) { $config.llm_cc_switch_provider_id=$previous.llm_cc_switch_provider_id }
-        foreach ($field in @('server_base_url','server_model','deepseek_base_url','deepseek_model','llm_temperature','llm_context_tokens','native_gate_path','opencode_project')) {
+        foreach ($field in @('server_base_url','server_model','deepseek_base_url','deepseek_model','llm_temperature','llm_context_tokens','native_gate_path','opencode_project','electron_executable')) {
             if ($null -ne $previous.$field) { $config[$field]=$previous.$field }
         }
         if ($previous.llm_cc_switch_profiles) { $config.llm_cc_switch_profiles=$previous.llm_cc_switch_profiles }
     }
+}
+if ($DesktopRuntime) {
+    if (!(Test-Path -LiteralPath $DesktopRuntime)) { throw 'DesktopRuntime executable not found.' }
+    $config.electron_executable=[IO.Path]::GetFullPath($DesktopRuntime)
 }
 $config | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $InstallDir 'config.json') -Encoding UTF8
 $pythonw = Join-Path (Split-Path -Parent $Python) 'pythonw.exe'
@@ -110,6 +125,19 @@ $direct.WorkingDirectory = $InstallDir
 $direct.Description = 'CATIA native modeling agent - OpenCode + MCP'
 $direct.WindowStyle = 7
 $direct.Save()
+foreach ($mode in @('Web','Desktop')) {
+    $argument = if ($mode -eq 'Web') { 'web' } else { 'desktop' }
+    $uiCommand = "@echo off`r`ncd /d `"$InstallDir`"`r`n`"$pythonw`" `"$InstallDir\launch_ui.py`" $argument`r`n"
+    $uiPath = Join-Path $InstallDir ('Launch' + $mode + '.cmd')
+    [IO.File]::WriteAllText($uiPath,$uiCommand,[Text.Encoding]::Default)
+    $uiShortcut = $shell.CreateShortcut((Join-Path $Workspace ('PhyXiCATIAAgent-' + $mode + '.lnk')))
+    $uiShortcut.TargetPath = $uiPath
+    $uiShortcut.WorkingDirectory = $InstallDir
+    $uiShortcut.WindowStyle = 7
+    $uiShortcut.Save()
+    $uiMacro = $macro.Replace('Launch.cmd',('Launch' + $mode + '.cmd'))
+    [IO.File]::WriteAllText((Join-Path $macros ('PhyXiCATIAAgent-' + $mode + '.CATScript')),$uiMacro,[Text.Encoding]::Default)
+}
 & $Python (Join-Path $InstallDir 'app.py') --self-check
 if ($LASTEXITCODE -ne 0) { throw 'Installed panel self-check failed.' }
 Write-Host "Installed: $InstallDir"

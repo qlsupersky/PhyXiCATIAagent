@@ -12,6 +12,20 @@
           "PHYXI_NATIVE_WORKSPACE": "C:/Path/To/workspace",
           "PHYXI_NATIVE_GATE": "C:/Path/To/workspace/native-modeling/execution.sqlite"
         }
+      },
+      "catia-v5": {
+        "type": "local",
+        "disabled": false,
+        "command": [
+          "C:/Path/To/catia-v5/.venv/Scripts/python.exe",
+          "C:/Path/To/PhyXiCATIAAgent/app/catia_adapter.py",
+          "--upstream",
+          "C:/Path/To/catia-v5-mcp-server"
+        ],
+        "environment": {
+          "PHYXI_NATIVE_WORKSPACE": "C:/Path/To/workspace",
+          "PHYXI_NATIVE_GATE": "C:/Path/To/workspace/native-modeling/execution.sqlite"
+        }
       }
     }
   }

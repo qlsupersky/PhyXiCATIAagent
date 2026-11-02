@@ -1,6 +1,8 @@
 # PhyXiCATIAagent
 
-**CATIA V5 自然语言原生建模插件 · OpenCode + MCP · 当前版本 0.6.5**
+**CATIA V5 自然语言原生建模插件 · OpenCode + MCP · 当前预发布版本 0.7.0**
+
+0.7.0 新增本地 WebUI、Electron 桌面工作台、保留原工具的多步骤 MCP 扩展及逐步结果反馈。安装与使用见 [WEBUI-070.md](WEBUI-070.md)。0.7.0 已作为预发布版本提供；开发与验证完成于 2026-10-31，公开同步于 2026-11-02。
 
 在插件中输入文字、粘贴图片或附加文件，使用 OpenCode 的连续会话与工具完成 CAD 辅助工作。核心能力是把自然语言需求转成 CATIA 原生 CATScript 宏，执行后保存、重新打开并核对实际结果。
 
@@ -9,6 +11,8 @@
 | 功能 | 说明 |
 |---|---|
 | OpenCode 图文对话 | 图片/文件上传、剪贴板图片、缩略图、连续会话、实际工具结果 |
+| WebUI / Electron | 同一后端的浏览器与桌面入口，保留原有 Tk 七页及完整 OpenCode 入口 |
+| 多步骤计划 | 98 个原工具 + 3 个计划工具；一轮顺序建模、测量、保存，逐步反馈与显式结果检查 |
 | 同一会话互通 | 插件与本机 OpenCode 默认服务共享项目和 session；可从原生界面继续 |
 | 模型 / Agent / 变体 | 动态读取 OpenCode 配置，不固定图文页模型 |
 | 原生建模 | 生成专属 CATScript；调用 native-modeling MCP 自动执行、去重和结果核对 |
@@ -28,7 +32,7 @@ Tk 图文页展示文本与工具结果，完整原生交互由 OpenCode 入口�
 
 ## 安装
 
-从 [Releases](https://github.com/qlsupersky/PhyXiCATIAagent/releases) 下载 0.6.5 安装包并解压，运行 `install.bat`；也可从源码安装：
+从 [Releases](https://github.com/qlsupersky/PhyXiCATIAagent/releases) 下载 0.7.0 预发布安装包并解压，运行 `install.bat`。浏览器 WebUI 可直接使用；Electron 桌面入口需安装 Node.js/npm，并在**安装后的 app 目录**运行 `install-desktop.ps1`。ZIP 不包含 Electron 运行时。也可从源码安装：
 
 ```powershell
 git clone https://github.com/qlsupersky/PhyXiCATIAagent.git
@@ -39,6 +43,12 @@ cd PhyXiCATIAagent
 默认安装目录为 `%USERPROFILE%/Documents/PhyXiCATIAAgent/app`，默认工作目录为 `%USERPROFILE%/Documents/PhyXiCATIAAgent`。升级时保留已有配置；自定义工作目录请显式传入 `-Workspace`。
 
 源码仓库不保存 200 MB 的 OpenCode 可执行文件。首次源码安装自动运行 [fetch-runtime.ps1](fetch-runtime.ps1)，下载固定版本的官方 npm 包并校验 SHA-256。Release 安装包已包含固定运行时。隔离宏生成引擎使用 OpenCode **2.0.20**，与图文页所连的 Desktop **2.2.0** 是不同组件，不能直接互换。
+
+## WebUI 与 Electron
+
+安装后打开工作目录中的 `PhyXiCATIAAgent-Web` 或 `PhyXiCATIAAgent-Desktop` 快捷方式，点击“连接 OpenCode”。可上传或粘贴图片，在“多步骤任务”模式一次提交多个目标，右侧查看真实工具反馈。保留原有 Tk 界面及同一会话的完整 OpenCode 原生入口。
+
+![Electron 工作台](docs/images/electron-workspace-0.7.0.png)
 
 ## 在 CATIA 中打开
 
@@ -73,12 +83,15 @@ New-Item -ItemType Directory -Force $env:PHYXI_TEST_WORK | Out-Null
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-0.6.5 已通过 55 项离线回归，以及实际图文输入、同一会话跨插件/CLI 续接、文件读写和两套 MCP 只读调用。完整检查范围见 [验证说明](docs/VALIDATION-0.6.5.md)。离线测试不需要派发 CATIA 调用；`tests/*_validation.py` 中部分历史脚本会操作真实 CAD，应单独阅读后使用。
+0.7.0 开发验证通过 82 项核心离线测试及 4 项独立上游适配契约测试。真实 CATIA 测试通过 11 步保存重开与复测，以及 WebUI 一次图文任务的 8 步圆环建模、体积检查和保存。此次公开快照另做离线、契约、安装与界面核验，范围见 [0.7.0 验证说明](docs/VALIDATION-0.7.0.md)。0.6.5 历史验证保留在 [原说明](docs/VALIDATION-0.6.5.md)。离线测试不需要派发 CATIA 调用；`tests/*_validation.py` 中部分历史脚本会操作真实 CAD，应单独阅读后使用。
 
 新请求自动执行。保留工程互斥、输入完整性、原文件保护和结果核对；状态不明的 CAD 调用不会自动重放。图文请求超时后刷新原会话，不要重新发送同一操作。几何已知失败自动释放，明确显示失败及诊断，修正后使用新的请求标识。
 
 ## 文档与来源
 
+- [WebUI 与 Electron 使用说明](WEBUI-070.md)
+- [0.7.0 开发说明](docs/DEVELOPMENT-0.7.0.md)
+- [2026年10月31日工作日志](docs/worklogs/2026-10-31.md)
 - [图文对话说明](OPENCODE-LINK.md)
 - [自然语言原生建模](NATIVE-MODELING.md)
 - [自动执行语义](AUTOMATIC-EXECUTION.md)

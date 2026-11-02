@@ -26,6 +26,7 @@ work/
 _work/
 _migration/
 dist/
+node_modules/
 *.zip
 *.tgz
 bin/*.exe

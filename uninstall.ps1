@@ -19,11 +19,20 @@ if (Test-Path -LiteralPath $documentShortcut) {
     }
 }
 # Only known application files are removed. Workspace/model output is retained.
-foreach ($name in @('opencode_link.py','opencode_panel.py','OPENCODE-LINK.md','native_images.py','native_examples.py','native_contract.py','native_gate.py','native_service.py','native_mcp.py','native_runtime.py','native_workflow.py','native_panel.py','NATIVE-MODELING.md','AUTOMATIC-EXECUTION.md','app.py','agent.py','responses_api.py','server_chat.py','server_connection.py','deepseek_connection.py','cc_switch.py','housing.py','section_analysis.py','vision_inputs.py','controller.py','templates.py','worker.py','automotive.py','surfaces.py','style_surfaces.py','REFERENCE-SURFACE-BRIEF.md','surface_quality.py','SURFACE-DEMO-BRIEF.md','providers.py','sessions.py','design_inputs.py','requirements.txt','build.ps1','README.md','LICENSE-NOTICE.md','Launch.cmd','config.json','config.before-update.json')) {
+foreach ($mode in @('Web','Desktop')) {
+    $uiShortcut = Join-Path $config.workspace ('PhyXiCATIAAgent-' + $mode + '.lnk')
+    if (Test-Path -LiteralPath $uiShortcut) {
+        $shell = New-Object -ComObject WScript.Shell
+        if ($shell.CreateShortcut($uiShortcut).TargetPath -eq (Join-Path $root ('Launch' + $mode + '.cmd'))) {
+            Remove-Item -LiteralPath $uiShortcut
+        }
+    }
+}
+foreach ($name in @('plan_engine.py','catia_adapter.py','web_backend.py','web_server.py','launch_ui.py','install-desktop.ps1','WEBUI-070.md','LaunchWeb.cmd','LaunchDesktop.cmd','opencode_link.py','opencode_panel.py','OPENCODE-LINK.md','native_images.py','native_examples.py','native_contract.py','native_gate.py','native_service.py','native_mcp.py','native_runtime.py','native_workflow.py','native_panel.py','NATIVE-MODELING.md','AUTOMATIC-EXECUTION.md','app.py','agent.py','responses_api.py','server_chat.py','server_connection.py','deepseek_connection.py','cc_switch.py','housing.py','section_analysis.py','vision_inputs.py','controller.py','templates.py','worker.py','automotive.py','surfaces.py','style_surfaces.py','REFERENCE-SURFACE-BRIEF.md','surface_quality.py','SURFACE-DEMO-BRIEF.md','providers.py','sessions.py','design_inputs.py','requirements.txt','build.ps1','README.md','LICENSE-NOTICE.md','Launch.cmd','config.json','config.before-update.json')) {
     $path = Join-Path $root $name
     if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
 }
-foreach ($folder in @('bin','bridge','samples','macros','__pycache__')) {
+foreach ($folder in @('bin','bridge','samples','macros','webui','desktop','__pycache__')) {
     $target = [IO.Path]::GetFullPath((Join-Path $root $folder))
     if (!$target.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe cleanup path.' }
     if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse }

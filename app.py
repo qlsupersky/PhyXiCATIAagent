@@ -29,7 +29,7 @@ class Panel:
         self.sessions = Sessions(self.controller.workspace)
         self.session_id = None
         self.attachment = None
-        root.title("PhyXiCATIAAgent 0.6.5 · OpenCode 图文工作台 + 原生建模")
+        root.title("PhyXiCATIAAgent 0.7.0 · OpenCode 图文工作台 + 原生建模")
         root.geometry("1080x860")
         root.minsize(880, 650)
         style = ttk.Style()
@@ -42,6 +42,8 @@ class Panel:
         ttk.Label(top, text="CATIA 原生建模智能体", font=("Microsoft YaHei UI", 17, "bold")).pack(side="left")
         self.status = tk.StringVar(value="就绪 · 启动 CATIA 后可创建演示模型")
         ttk.Label(top, textvariable=self.status).pack(side="right")
+        self.button(top, 'WebUI', lambda: self.launch_workspace('web')).pack(side='right', padx=5)
+        self.button(top, 'Electron', lambda: self.launch_workspace('desktop')).pack(side='right', padx=5)
         self.tabs = ttk.Notebook(root)
         self.tabs.grid(row=1, column=0, sticky='nsew', padx=12)
         model = ttk.Frame(self.tabs, padding=12)
@@ -275,6 +277,11 @@ class Panel:
         except queue.Empty:
             pass
         self.root.after(100, self.poll)
+
+    def launch_workspace(self, mode):
+        from launch_ui import launch
+        try: launch(mode)
+        except Exception as error: messagebox.showerror('工作台', str(error), parent=self.root)
 
     def set_busy(self, busy):
         self.busy = busy
