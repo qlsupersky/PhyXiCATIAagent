@@ -50,6 +50,16 @@ A valid BRep can still contain small disconnected solid remnants. One native Bod
 
 For analytic cylinder boundaries, grouping by axis, radius and oriented radial normal can support a bore-wall inventory. Such candidates do not establish through-hole semantics, arbitrary opening count, or design compliance. Textual inferences also need review: a center of gravity cannot establish every local concavity, and area/volume unit conversions must be checked independently.
 
+## Post-result images and bounded observation
+
+A separate post-result vision check compared the reference image, the actual CAD screenshot, and an independent solid-only STEP rendering. It helped expose broad shape simplification and construction-surface occlusion. It also produced unsupported small-hole guesses and an inconsistent count. Preserve these replies as model observations; do not promote image uncertainty into confirmed missing or blocked geometry. This is an explicit postcheck, not an already deployed automatic visual correction loop.
+
+Selected circular bores can be checked more strongly than an inward-cylinder inventory. In one independently inspected single-solid cover, all 22 selected cylindrical walls also had surrounding material-ring samples and clear center/near-wall axial lines. These are sampled geometric checks for the selected axes and radii, not a general recognizer for blind holes, irregular openings, or every point of the bore volume.
+
+A complex joined-section surface can be created successfully yet fail its subsequent offset/thickening update. In one trial, two bound ThickSurface updates returned explicit failures after about 193 and 1089 seconds. The sharp multi-segment input is a risk observation; the geometric root cause was not independently established. Do not count the surface as a finished solid or reinterpret long execution as success.
+
+A language-stall observer must exclude CAD execution time. Checking only that a gate is IDLE at one instant can interrupt language processing immediately after a long CAD call returns. A corrected observer requires both no visible language/tool progress and a continuously IDLE CAD interval exceeding the budget. Six offline timing decisions covered running CAD, newly returned CAD, true idle stall, recent progress, already interrupted work, and missing idle evidence. This correction was made to the test supervisor only; it is not a production plugin release or a reason to cancel/replay an in-flight CAD operation. The original premature interruption remains in the evidence.
+
 ## Local deployment remains a separate project
 
 An eight-GPU server description is insufficient to establish deployment fit. Verify per-device VRAM, obtainable weights, quantization and framework support, tensor/expert parallelism, context length, concurrency, and the resources needed by both text and vision services.
