@@ -29,6 +29,8 @@ These are integration findings, not reasons to reinterpret a failed model as suc
 
 Recommended follow-up work is strict unknown-field rejection before any CAD dispatch, verification of returned feature positions, explicit no-effect classifications, and per-operation unit contracts. This note does not claim these follow-up changes have been deployed.
 
+Object kinds also matter. The exercised upstream feature-deletion implementation searches `Body.Shapes`; a GSD spline is not in that collection. A lookup failure raised before `Selection.Delete` was wrapped as generic `COM_ERROR`, causing an unnecessary uncertain gate state. The exact request was adjudicated from the persisted synchronous failure, source control flow, and terminal session evidence, without replay. This does not permit a universal exemption for COM or transport errors. Query and deletion tools should distinguish solid features, sketches, and hybrid-shape objects explicitly.
+
 ## Geometry checks need separate evidence
 
 The following statements are different:
@@ -41,6 +43,12 @@ The following statements are different:
 - The model is fully parameterized, manufacturable, or Class-A.
 
 For STEP inspection, isolate closed solids before calculating physical volume. Exports may also contain open construction surfaces; their aggregate signed mass is not a solid's volume. Use adaptive integration for trimmed B-spline solids, and compare the independent volume with CATIA's measurement. Valid BRep topology alone does not verify hole count, parameter relations, surface continuity, or manufacturing constraints.
+
+Numerical integration itself needs checking. An ordinary adaptive Gauss result for a heavily trimmed B-spline solid differed materially from a span-aware Gauss-Kronrod calculation. Refining the latter's requested tolerance produced stable results close to the CAD-side measurement. Preserve the original result, report the reached error estimate, and compare multiple tolerances before treating a volume discrepancy as lost material. Requested tolerance is not proof that the algorithm reached it.
+
+A valid BRep can still contain small disconnected solid remnants. One native Body and a plausible overall view do not establish that the exported part is one continuous solid. Check solid count, connectivity and each component's volume separately. Independently rendered solid-only views also prevent visible construction surfaces from making genuine openings appear filled.
+
+For analytic cylinder boundaries, grouping by axis, radius and oriented radial normal can support a bore-wall inventory. Such candidates do not establish through-hole semantics, arbitrary opening count, or design compliance. Textual inferences also need review: a center of gravity cannot establish every local concavity, and area/volume unit conversions must be checked independently.
 
 ## Local deployment remains a separate project
 
