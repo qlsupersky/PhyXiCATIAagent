@@ -1,0 +1,9 @@
+# Native macro route
+
+`modeling_execute(request_id, requirement, macro_ascii, checks, summary)` accepts a complete ASCII VBScript CATScript with `Sub CATMain(runId, outputPath, resultPath)`. The tool binds bytes and a one-use identity, executes against CATIA, then saves, reopens and reads back its generated result. Read the live tool schema and the installed `native_contract.py` or packaged sample if exact output/check fields are needed. Do not guess them or mark absent evidence passed.
+
+The `checks` object requires exactly `features`, `sketch_count`, and `volume_mm3`. `features` contains 1–40 entries with required unique ASCII `name` and optional positive `depth_mm` and boolean `symmetric`; there is no `type` field. Only list solid features in Body.Shapes, not sketches. `sketch_count` is an integer from 1 to 80. `volume_mm3` is a positive numeric theoretical volume, or null when it cannot reliably be calculated; it is not a target/tolerance object. The installed executor applies its own volume comparison. Expected dimensions and volume must describe the intended geometry, not mirror a failed candidate. For example: `{"features":[{"name":"BasePad","depth_mm":10,"symmetric":false}],"sketch_count":1,"volume_mm3":1000}`.
+
+Use `CATIA.Documents.Add("Part")`, operate on the new document, and retain native sketches and features. `Part` does not expose `PartNumber`; use `doc.Product.PartNumber` if numbering is needed. Do not close or overwrite another document. Keep strings/feature names ASCII within `macro_ascii`.
+
+Macro result protocol and accepted statements are screened by the installed service. Inspect its sample/contract before generation; do not bypass screening by writing a shell or COM helper. A returned script-engine failure is FAILED/KNOWN_FINISHED; preserve it and send a corrected program with a new request ID. A timeout/RPC error remains uncertain until actual terminal evidence is available.

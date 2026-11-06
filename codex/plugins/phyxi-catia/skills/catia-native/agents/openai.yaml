@@ -1,0 +1,4 @@
+interface:
+  display_name: "CATIA 原生建模"
+  short_description: "通过现有 MCP 在 CATIA 中生成原生宏、检查零件并核对真实结果"
+  default_prompt: "使用 $catia-native，根据我的描述或参考图片在 CATIA 中创建原生可编辑零件，并核查实际结果。"

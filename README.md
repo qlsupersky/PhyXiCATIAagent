@@ -4,6 +4,8 @@
 
 0.7.0 新增本地 WebUI、Electron 桌面工作台、保留原工具的多步骤 MCP 扩展及逐步结果反馈。安装与使用见 [WEBUI-070.md](WEBUI-070.md)。0.7.0 已作为预发布版本提供；开发与验证完成于 2026-10-31，公开同步于 2026-11-02。
 
+新增 [Codex MCP 与原生 Skill / Plugin 接入](codex/README.md)：支持迁移现有两套 MCP，或生成自带 MCP 的 Codex 插件；已完成真实 Codex 客户端连接及四孔板原生宏保存/重开验证。该扩展独立版本为0.1.0，现有 WebUI 仍保留 OpenCode。
+
 新增 [CATIA 内嵌工作区实验原型](embedded/README.md)：原生 WebView2 宿主已编译并完成独立宿主图文/MCP 联通验证，CAA 工具栏及内部 MDI 面板候选源码已提供。当前缺少匹配 CAA SDK/RADE，**尚未在 CATIA 加载，不能作为可用内嵌工作台安装**；0.7.0 安装版和 Release 保持不变。
 
 在插件中输入文字、粘贴图片或附加文件，使用 OpenCode 的连续会话与工具完成 CAD 辅助工作。核心能力是把自然语言需求转成 CATIA 原生 CATScript 宏，执行后保存、重新打开并核对实际结果。

@@ -1,0 +1,10 @@
+{
+  "name": "phyxi-catia-local",
+  "interface": {"displayName": "PhyXi CATIA"},
+  "plugins": [{
+    "name": "phyxi-catia",
+    "source": {"source": "local", "path": "./plugins/phyxi-catia"},
+    "policy": {"installation": "AVAILABLE", "authentication": "ON_USE"},
+    "category": "Developer Tools"
+  }]
+}
