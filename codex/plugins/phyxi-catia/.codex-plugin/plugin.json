@@ -1,7 +1,7 @@
 {
   "name": "phyxi-catia",
-  "version": "0.1.0",
-  "description": "CATIA native modeling workflows for Codex using existing PhyXi MCP servers.",
+  "version": "0.2.0",
+  "description": "CATIA code-driven MCP orchestration and native modeling workflows for Codex.",
   "skills": "./skills/",
   "author": {"name": "PhyXiCATIAagent contributors"}
 }

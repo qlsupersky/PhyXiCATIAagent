@@ -1,5 +1,9 @@
 # Codex 接入：MCP 配置与原生 Skill / Plugin
 
+## 当前推荐：代码编排模式
+
+2026-11-07新增 [Code Mode / PTC](../code_mode/README.md)，Skill更新至0.2.0。下面的直接104工具配置迁移是历史接入路径；新需求采用 JavaScript 编排、三个模型侧入口或代码文件 CLI。两种注册不要同时启用；Code Mode安装器会禁用旧直接条目且保留回滚。
+
 两条路径均已实现。本扩展版本为 **0.1.0**，现有 CATIA 插件和工具服务仍为 **0.7.0**。这里适配的是 MCP 客户端和工作流，未把 CATIA 商业软件重写为 Codex，也未替换现有 WebUI 的 OpenCode 后端。
 
 ## 路径一：现有 MCP 直接接入 Codex

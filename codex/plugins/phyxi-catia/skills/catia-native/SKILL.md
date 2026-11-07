@@ -1,20 +1,23 @@
 ---
 name: catia-native
-description: Create, inspect, or modify CATIA V5 parts using PhyXi native macro execution and catia-v5 MCP tools, including reference-image-assisted modeling. Use for CATIA work, not generic CAD conversion or offline SimpleCAD geometry.
+description: Create, inspect, or modify CATIA V5 parts by writing JavaScript programs that call existing MCP tools through PhyXi Code Mode, including reference-image-assisted native macro generation.
 ---
 
-Use the connected `catia-v5` or `native-modeling` server. Discover the actual tool names and schemas exposed by the current Codex client; server IDs with hyphens may be normalized in tool namespaces. Do not invent a renamed tool, use OpenCode-only `execute` syntax, or create a COM script to bypass the MCP.
+Use **Code Mode** for this project: write an async JavaScript function body, submit it once through `catia-code.ptc_execute`, and poll `ptc_status`. Discover exact backend schemas with `ptc_catalog(server, names)`. Only three tools face the model; the existing104 tools are capabilities called from code. For a file-based entry without any structured model-side MCP submission, use `code_mode/cli.py run`; see the repository's `code_mode/README.md` for installation and CLI parameters.
 
-Start with `catia_plan_status` or `modeling_status`. Both clients share one CATIA gate. A RUNNING/FROZEN/uncertain request blocks new CAD calls; inspect its recorded result rather than retrying, resetting its database, or killing CAD. A returned FAILED/KNOWN_FINISHED request may be corrected with a new request ID without a manual approval step. Respect the current user's execution authorization; this skill does not grant independent authority.
+Inside code use `await tools.catia_v5.TOOL(args)` or `await tools.native_modeling.TOOL(args)`. Replies are `{ok,data,uncertain,images}`; failed calls throw and stop further host dispatch even if caught. Use loops, branches, aggregation and assertions. Return concise JSON, at most8192 UTF-8 bytes. Full intermediate evidence stays local. Inline images are retained in evidence; only their count reaches guest code. This does not supply an automatic visual feedback loop.
 
-Choose a route:
+```javascript
+const s = await tools.native_modeling.modeling_status({});
+if(s.data.gate.status !== 'IDLE') return {ready:false,gate:s.data.gate.status};
+const r = await tools.catia_v5.catia_list_documents({});
+return {ready:true,documents:r.data};
+```
 
-- For a complete new part driven by natural language, generate a native ASCII CATScript and use `modeling_execute`; read [macro-contract.md](references/macro-contract.md) for the actual entrypoint and checks. Codex generates the program directly; no OpenCode model service is required.
-- For inspection, local edits, or stepwise native construction, use existing `catia-v5` tools. Query `catia_plan_catalog` with selected names and `include_schema=true`. A `catia_plan_run` plan holds the shared mutex for up to 30 serial steps and persists results. Read [tool-contracts.md](references/tool-contracts.md) for known field/unit pitfalls before saving, cutting, or measuring.
-- For an attached image, distinguish visible geometry, dimensions read from labels, and assumptions. If the active model cannot accept images, state that limitation and use an explicitly available visual service; do not silently claim text-only image recognition. A screenshot is supporting evidence, not proof of thickness, hole count, topology, Class-A continuity or manufacturing quality.
+Guest JavaScript runs in QuickJS WebAssembly without Node, filesystem or network APIs. The trusted Python broker actually dispatches MCP. The original shared gate controls each backend call; the whole program is not an atomic transaction. Generate and call `catia_plan_run` for an atomic multi-step span. Do not bypass MCP with COM/shell helpers. CATIA macro execution is not an OS sandbox.
 
-Preserve existing documents and customer originals. New models and diagnostic copies go to the configured workspace or the user's selected output directory. Retain native features and measurable design intent. A known failed strategy should not be retried more than twice without changing the construction method or reporting the missing feature.
+Query the current gate from code before changes. RUNNING/FROZEN/UNCERTAIN blocks new work; inspect the same request, never replay/reset it. FAILED/KNOWN_FINISHED permits corrected NEW requests without manual approval. Same ID+same code returns cache; changed code with the same ID is rejected. Unfinished records remain blocking after broker restart until actual upstream evidence is reconciled. Process exit alone is not completion.
 
-Check the returned result of each significant operation. `FEATURE_NO_EFFECT` means the intended cut did not occur even if the outer transport says SUCCEEDED. A saved file, a feature-tree node, a changed volume, valid STEP topology and complete requirements are distinct findings. Verify operation position/direction, material change, solid count, and requested dimensions as appropriate. Report actual missing or simplified geometry. For images, compare clean solid-only views or sections with geometry evidence before claiming a hole is blocked or a surface is concave.
+For new parts, generate ASCII CATScript in code and call `modeling_execute`; read [macro-contract.md](references/macro-contract.md). For inspection/edits, discover selected catia-v5 schemas and read [tool-contracts.md](references/tool-contracts.md). Preserve originals and user documents. Use the configured output workspace. Check actual dimensions, material change and save/reopen evidence; execution success alone is not engineering/Class-A acceptance.
 
-If a call times out, observe the same request until its true state is known. A Codex timeout or closing a conversation is not evidence that CATIA finished. Do not resubmit an uncertain operation. Save actual conversations, outputs and checks locally; exclude credentials and customer material from public packages.
+For reference images, separate observed shape, legible dimensions and assumptions. Do not claim text-only models see images. Report real evidence and limitations. Keep credentials, customer files and raw sessions out of public packages.
