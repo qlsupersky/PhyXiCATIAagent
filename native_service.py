@@ -189,6 +189,22 @@ class NativeService(SessionGate):
                 len(terminal) != 1 or not rows or rows[-1].get('name') != 'execution_finished'):
             return None
         end = terminal[0]
+        # A failed ROT lookup never acquired a CATIA object. Accept ONLY this
+        # complete, bound three-event trace; never generalize RPC/dispatch errors.
+        if (end.get('run_id') == job and end.get('macro_sha256') == manifest['macro_sha256'] and
+                end.get('checks_sha256') == manifest['checks_sha256'] and
+                end.get('com_return_observed') is False and end.get('script_error_returned') is False and
+                end.get('outcome') == 'UNKNOWN' and exit_record['returncode'] == 2 and
+                [r.get('name') for r in rows] == ['before_call', 'probe_error', 'execution_finished'] and
+                rows[0].get('detail', {}).get('call') == 'Marshal.GetActiveObject' and
+                rows[1].get('detail', {}).get('type') == 'System.Runtime.InteropServices.COMException' and
+                rows[1].get('detail', {}).get('hresult') == -2147221021):
+            return {'job_id': job, 'state': 'FAILED', 'passed': False,
+                    'completion': 'KNOWN_FINISHED', 'reason': 'catia_not_running_before_dispatch',
+                    'CAD_dispatch': False, 'readback': None, 'diagnostic': None,
+                    'gate_released_automatically': True, 'interactive_approval_required': False,
+                    'same_request_replay_allowed': False, 'cached_no_CAD_dispatch': False,
+                    'next_action': 'Start/connect CATIA, then submit a NEW request; preserve this failure.'}
         if (end.get('run_id') != job or end.get('macro_sha256') != manifest['macro_sha256'] or
                 end.get('checks_sha256') != manifest['checks_sha256'] or
                 end.get('com_return_observed') is not True or end.get('outcome') != 'FAILED' or

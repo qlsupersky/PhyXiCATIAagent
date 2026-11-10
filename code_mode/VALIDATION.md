@@ -1,5 +1,7 @@
 # Code Mode 验证记录 — 2026-11-07
 
+> 后续更新（2026-11-10）：下文是0.1.0历史记录。当前独立扩展为0.2.0，已新增真正的MCP图片反馈、具体错误透传、异步等待和耗时记录；完整对照与失败案例见 [EVALUATION-20261110.md](EVALUATION-20261110.md)。31项CodeMode测试、90项核心回归通过。6个主对照最终模型和2个修正模型另经独立STEP检查通过；原位加厚件没有保持4孔贯通，判定失败。PTC本轮端到端耗时和遥测token高于已有批处理宏基线，不能只引用最终return压缩量代表整体效率。历史运行未重放、未改写成新成绩。
+
 ## 实现范围
 
 采用 QuickJS WebAssembly + Python MCP broker，实现 JavaScript 的循环、条件、筛选、聚合、生成原生宏及 MCP Promise 暂停/恢复。没有把 JSON plan 改名冒充代码执行。Codex配置中原两套直接工具注册已禁用并保留，新增 catia-code；Skill-only Plugin更新为0.2.0。现有0.7.0应用、OpenCode WebUI及模型凭据不变。

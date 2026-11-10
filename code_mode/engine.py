@@ -15,6 +15,7 @@ import uuid
 from jsonschema import validate
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from feedback import native_feedback, finalize_feedback
 
 SERVERS = ('native-modeling', 'catia-v5')
 ALIASES = {'native_modeling': 'native-modeling', 'catia_v5': 'catia-v5'}
@@ -56,14 +57,22 @@ def project(raw):
                 data = plan['results'][0]['data']
         # Older native failure responses may omit state but carry passed=false.
         if isinstance(data, dict) and ('final' in data or 'readback' in data):
-            ok = ok and data.get('final', {}).get('passed', True) is not False
-            ok = ok and data.get('readback', {}).get('passed', True) is not False
+            ok = ok and (data.get('final') or {}).get('passed', True) is not False
+            ok = ok and (data.get('readback') or {}).get('passed', True) is not False
+            ok = ok and (data.get('reopened_readback') or {}).get('passed', True) is not False
         if isinstance(data, dict) and set(data) == {'text'}:
             data = decode_text(data['text'])
     if isinstance(data, str) and re.match(r'^\s*(error\b|failed\b|exception\b)', data, re.I):
         ok = False
+    detail = None
+    if not ok:
+        if isinstance(data, dict):
+            detail = data.get('message') or data.get('reason') or data.get('error')
+        elif isinstance(data, str):
+            detail = data
     return {'ok': ok, 'data': data, 'uncertain': uncertain,
-            **({} if ok else {'error': 'UPSTREAM_UNCERTAIN' if uncertain else 'UPSTREAM_FAILED'})}
+            **({} if ok else {'error': 'UPSTREAM_UNCERTAIN' if uncertain else 'UPSTREAM_FAILED',
+                              'error_detail': str(detail)[:1200] if detail else 'See bound upstream evidence.'})}
 
 
 class Backends:
@@ -132,6 +141,17 @@ class Engine:
         # Never return raw tool contents or code from polling.
         return {k: v for k, v in record.items() if k != 'code'}
 
+    async def wait_status(self, request_id, wait_ms=0):
+        if type(wait_ms) is not int or not 0 <= wait_ms <= 20000:
+            raise ValueError('wait_ms must be an integer from 0 to 20000')
+        deadline = time.monotonic() + wait_ms / 1000
+        while True:
+            record = self.status(request_id)
+            remaining = deadline - time.monotonic()
+            if record['status'] != 'RUNNING' or remaining <= 0:
+                return record
+            await asyncio.sleep(min(.1, remaining))
+
     async def start(self, request_id, code):
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,100}', request_id or ''):
             raise ValueError('Invalid request_id')
@@ -142,7 +162,8 @@ class Engine:
             'calls': 0, 'raw_tool_bytes': 0, 'guest_result_bytes': 0,
             'completion': 'NOT_YET_KNOWN', 'no_replay': True, 'code': code,
             'evidence_directory': str(self.root / request_id), 'runner_pid': os.getpid(),
-            'geometry_verified': False, 'started_at': time.time()}
+            'geometry_verified': False, 'started_at': time.time(),
+            'version': '0.2.0', 'backend_ms': 0, 'startup_ms': 0}
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             prior = db.execute('SELECT digest FROM runs WHERE id=?', (request_id,)).fetchone()
@@ -178,8 +199,10 @@ class Engine:
         process = None
         in_flight = False
         stopped = False
+        startup = time.perf_counter()
         try:
             async with self.backend_factory(self.config, folder) as backends:
+                record['startup_ms'] = round((time.perf_counter() - startup) * 1000, 3)
                 # No secrets, files, sockets or processes are injected into guest.
                 # Node is trusted runtime; its environment is also minimized.
                 child_env = {k: v for k, v in os.environ.items() if k.upper() in ('SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP')}
@@ -239,13 +262,20 @@ class Engine:
                             (folder / f'{sequence:03d}-intent.json').write_text(encode(intent), encoding='utf-8')
                             self.save(record)  # durable before actual MCP call
                             in_flight = True
+                            call_started = time.perf_counter()
                             raw = await backends.call(server, tool, args)
+                            duration_ms = round((time.perf_counter() - call_started) * 1000, 3)
+                            record['backend_ms'] += duration_ms
+                            (folder / f'{sequence:03d}-timing.json').write_text(encode({'duration_ms': duration_ms}), encoding='utf-8')
                             # Persist full result before handing it back to the guest.
                             raw_bytes = encode(raw).encode('utf-8')
                             (folder / f'{sequence:03d}-result.json').write_bytes(raw_bytes)
                             record['raw_tool_bytes'] += len(raw_bytes)
                             reply = project(raw)
                             in_flight = False
+                            if server == 'native-modeling' and tool == 'modeling_execute':
+                                feedback = native_feedback(reply.get('data'), self.root.parent, folder)
+                                if feedback: record['feedback'] = feedback
                             # Strip inline image bytes; retain images in raw evidence.
                             reply['images'] = sum(c.get('type') == 'image' for c in raw.get('content', []))
                             if len(encode(reply).encode()) > 8 * 1024 * 1024:
@@ -254,7 +284,14 @@ class Engine:
                             if not reply['ok']:
                                 stopped = True
                                 record['error'] = reply['error']
-                                record['upstream_uncertain'] = reply.get('uncertain', False)
+                                record['upstream_failure'] = {'server':server,'tool':tool,
+                                    'message':reply.get('error_detail'),'sequence':sequence}
+                                # A completed read-only status query may OBSERVE
+                                # an uncertain CAD job; it did not itself dispatch
+                                # unknown work. Keep the shared CAD gate blocking.
+                                observed_only = server == 'native-modeling' and tool == 'modeling_status'
+                                record['observed_upstream_uncertain'] = bool(reply.get('uncertain') and observed_only)
+                                record['upstream_uncertain'] = reply.get('uncertain', False) and not observed_only
                             self.save(record)
                         else:
                             reply['error'] = record.get('error', 'PROGRAM_STOPPED')
@@ -273,6 +310,9 @@ class Engine:
                 process.kill()
                 await process.wait()
             record['finished_at'] = time.time()
+            record['elapsed_ms'] = round((record['finished_at'] - record['started_at']) * 1000, 3)
+            record['feedback'] = finalize_feedback(record)
+            (folder / 'feedback.json').write_text(encode(record['feedback']), encoding='utf-8')
             self.save(record)
 
 

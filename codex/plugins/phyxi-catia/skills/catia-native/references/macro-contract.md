@@ -6,4 +6,6 @@ The `checks` object requires exactly `features`, `sketch_count`, and `volume_mm3
 
 Use `CATIA.Documents.Add("Part")`, operate on the new document, and retain native sketches and features. `Part` does not expose `PartNumber`; use `doc.Product.PartNumber` if numbering is needed. Do not close or overwrite another document. Keep strings/feature names ASCII within `macro_ascii`.
 
+Set `body.Name="Own_" & runId` on the new body's local variable. The only allowed global CATIA expression in this macro route is `CATIA.Documents.Add("Part")`; `CATIA.ActiveWindow.ActiveViewer.Reframe` is rejected before CAD execution. The trusted executor already saves, reopens and captures the candidate. Put inspection/view operations in separate existing MCP calls when needed. This route creates a new candidate and cannot perform an in-place edit of an existing document; use catia-v5 parameter tools for that.
+
 Macro result protocol and accepted statements are screened by the installed service. Inspect its sample/contract before generation; do not bypass screening by writing a shell or COM helper. A returned script-engine failure is FAILED/KNOWN_FINISHED; preserve it and send a corrected program with a new request ID. A timeout/RPC error remains uncertain until actual terminal evidence is available.

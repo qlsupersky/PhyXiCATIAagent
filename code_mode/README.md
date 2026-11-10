@@ -1,4 +1,4 @@
-# CATIA Code Mode / PTC（扩展0.1.0）
+# CATIA Code Mode / PTC（扩展0.2.0）
 
 这次扩展实现“AI 写程序 → 运行时调用 MCP → 程序筛选结果 → 只返回摘要”。它与仅把 MCP 配置迁入 Codex 不同，也不把固定 JSON 工具列表包装成代码。JavaScript 可以根据工具结果循环、分支、断言、计算参数及生成 CATIA 原生宏。
 
@@ -32,7 +32,7 @@ return {ready:busy.length===0, observed:gates};
 
 ## 安装
 
-要求 Windows、Node.js（本机验证v20.11.0）、Python3.12与现有两套可用 CATIA MCP。项目整体安装版仍为0.7.0，此处为独立 Code Mode 扩展0.1.0、Skill0.2.0。
+要求 Windows、Node.js（本机验证v20.11.0）、Python3.12与现有两套可用 CATIA MCP。项目整体安装版仍为0.7.0，此处为独立 Code Mode 扩展0.2.0、Skill0.2.0（说明已补充反馈流程）。
 
 ```powershell
 python -m pip install -r code_mode/requirements.txt
@@ -71,7 +71,8 @@ python code_mode/cli.py --backends C:/path/to/backends.json --node C:/path/to/no
 - **编排代码隔离不等于 CATIA 宏的 OS 沙箱**。原工具能力、原生宏筛选与原共享执行门继续生效。完整脚本不持有跨调用原子锁；需要原子多步骤时从代码生成并调用 `catia_plan_run`。
 - 持久化先记录 intent，再调用 MCP，再保存原始结果，最后将结果送回代码。相同 ID+相同代码只读缓存；相同 ID+不同代码拒绝。传输错误/未知结束保持 UNCERTAIN，阻止新任务，不自动重试或重置。
 - RUNNING 任务异步执行，前端查询无需等 CAD 返回。关闭服务不是取消 CAD 的证据。进程重启后的遗留 RUNNING/UNCERTAIN 记录仍阻断，当前未提供自动对账/解锁入口，需根据真实底层终态证据处理。
-- 当前只向 Guest 传图片数量；完整图片留本地证据。未实现自动把截图回送视觉模型，不把图片上传能力或该封装说成识图模型。
+- 只向 Guest 传图片数量；`ptc_status(request_id, include_feedback=true)` 可将本次原生执行器产生的成功或失败候选截图作为真正的 MCP ImageContent 返回给模型，并包含特征/厚度/体积偏差。图片固定绑定任务目录和SHA256，不捕获任意桌面。默认不带图片。模型仍须主动读取、解释和决定修正；封装本身不保证自动识图或自修复。
+- 状态记录新增启动、底层MCP及总耗时；完整时序留在本地。观测到未知上游状态的已完成只读查询，会保留上游阻断提示，而不冒充一次未知的CAD写操作；真实写入或传输不确定仍保持阻断。
 - SUCCEEDED 表示程序运行完成；`geometry_verified` 保持 false，不能代替独立拓扑、制造或 A 级曲面验收。
 
 依赖 quickjs-emscripten0.32.0（MIT），锁文件固定依赖。安装目录需保留 runtime/node_modules；公共源码不提交该目录。
@@ -81,7 +82,11 @@ python code_mode/cli.py --backends C:/path/to/backends.json --node C:/path/to/no
 ```powershell
 $env:PHYXI_PTC_TEST_NODE='C:/path/to/node.exe'
 cd code_mode
-python -m unittest -v test_engine test_install
+python -m unittest -v test_engine test_install test_feedback
 ```
 
-20项测试覆盖循环/分支/聚合、去重、失败停止、未知阻断、schema、CPU/内存/输出/调用上限、Guest不可访问Node、Promise串行、未await报错、安装配置保留与回滚冲突。真实 Codex/CATIA 结果见 [VALIDATION.md](VALIDATION.md)。不将引用文章的token或基准提升比例当作本项目实测。
+31项测试覆盖循环/分支/聚合、去重、失败停止、未知阻断、schema、CPU/内存/输出/调用上限、Guest不可访问Node、Promise串行、未await报错、安装配置保留、回滚冲突，以及绑定截图、空读回、截图篡改、只读观测分类、具体上游错误保留和异步等待。真实 Codex/CATIA 结果见 [VALIDATION.md](VALIDATION.md)及[PTC对照评测](EVALUATION-20261110.md)。不将引用文章的token或基准提升比例当作本项目实测。
+
+建议把状态检查、执行及结果筛选放入同一个程序；首次只发现所需schema。可用`ptc_status(request_id, wait_ms=20000, include_feedback=true)`异步等待最多20秒以减少模型反复轮询。默认等待0毫秒，不改变CAD状态或重发请求。失败时`upstream_failure.message`保留最多1200字符的具体上游原因，供模型修改新候选。新功能可减少诊断障碍，但不能把修复前实验耗时改写为修复后的成绩。
+
+可用`benchmark.py --backends <本机保护配置> --node <node.exe> --output <新目录>`复现只读传输层对照；无模型推理、无几何写入。每档1/6/18次相同目录查询，默认3重复，交替次序。它测执行开销和序列化数据量，不测模型token、CAD复杂度或自主准确率。已有原生宏/plan也能批处理，因此PTC不保证比这些基线更快。

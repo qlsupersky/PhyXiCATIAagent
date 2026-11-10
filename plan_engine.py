@@ -51,10 +51,18 @@ def normalize(tool, raw, duration=0):
     returned_hresult = re.search(r'(?<!\d)(-2147467259|-2147024809|-2147352573|-2147352571)(?!\d)', diagnostic)
     if code == 'COM_ERROR' and returned_hresult: uncertain = False
     if re.search(r'RPC_E_|RPC_S_|0x80010[018]|0x800706b[aef]|-2147417848|-2147023174', diagnostic, re.I): uncertain = True
+    no_active_document = (tool == 'catia_get_active_document_info' and not ok and code == 'COM_ERROR'
+        and isinstance(data, dict) and data.get('tool') == tool
+        and data.get('message') == 'No active document in CATIA. Create or open a document first.'
+        and data.get('data') == {'failure_stage': 'execute'})
+    if no_active_document:
+        uncertain = False
+        effects = {'modified': False}
     return {'tool': tool, 'ok': ok, 'code': code, 'completion': 'UNCERTAIN' if uncertain else 'KNOWN_FINISHED',
             'duration_ms': round(duration * 1000, 2), 'effects': effects,
             'verification': {'status': 'NOT_REQUESTED', 'checks': []},
-            'completion_evidence': {'returned_hresult': returned_hresult.group(1)} if returned_hresult and not uncertain else {},
+            'completion_evidence': ({'precondition': 'NO_ACTIVE_DOCUMENT_READ_ONLY'} if no_active_document else
+                {'returned_hresult': returned_hresult.group(1)} if returned_hresult and not uncertain else {}),
             'data': data if data is not None else {'text': text}, 'raw': raw}
 
 

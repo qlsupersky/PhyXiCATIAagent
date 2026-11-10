@@ -96,6 +96,20 @@ class CodeModeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['status'], 'FAILED')
         self.assertEqual([x[0] for x in FakeBackends.dispatches], ['fail'])
 
+    async def test_failure_record_retains_upstream_diagnostic(self):
+        result=await self.run_program('await tools.catia_v5.fail({id:0});')
+        self.assertEqual(result['status'],'FAILED')
+        self.assertIn('known failed',result['upstream_failure']['message'])
+        self.assertIn('known failed',result['feedback']['upstream_failure']['message'])
+
+    async def test_bounded_async_status_wait_reads_without_replay(self):
+        await self.engine.start('wait','return (await tools.catia_v5.lookup({id:2})).data.id;')
+        r=await self.engine.wait_status('wait',20000)
+        self.assertEqual(r['status'],'SUCCEEDED')
+        self.assertEqual(len(FakeBackends.dispatches),1)
+        for value in [-1,20001,True,1.5]:
+            with self.assertRaises(ValueError):await self.engine.wait_status('wait',value)
+
     async def test_uncertain_blocks_new_program(self):
         result = await self.run_program('await tools.catia_v5.uncertain({id:0});')
         self.assertEqual(result['status'], 'UNCERTAIN')

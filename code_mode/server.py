@@ -2,6 +2,8 @@
 import os
 from mcp.server.fastmcp import FastMCP
 from engine import Engine, load_config
+from feedback import content_for_status
+from mcp.types import CallToolResult
 
 config = load_config(os.environ['PHYXI_PTC_BACKENDS'])
 engine = Engine(config['catia-v5']['env']['PHYXI_NATIVE_WORKSPACE'], config, os.environ['PHYXI_PTC_NODE'])
@@ -22,13 +24,18 @@ async def ptc_execute(request_id: str, code: str) -> dict:
 
 
 @mcp.tool()
-def ptc_status(request_id: str) -> dict:
+async def ptc_status(request_id: str, include_feedback: bool = False, wait_ms: int = 0) -> CallToolResult:
     """Read concise running/final result and evidence location. Never replay/unlock.
 
+    Set include_feedback=true to receive a bound native candidate screenshot as
+    actual MCP ImageContent plus measured diagnostics, including on known failures.
+    It reads recorded evidence only, never captures arbitrary desktop or dispatches CAD.
+    Optional wait_ms=0..20000 waits asynchronously for a terminal record, reducing
+    repeated model polling; it does not cancel, replay or change job state.
     RUNNING may outlive frontend waits. UNCERTAIN requires actual upstream evidence;
     do not resubmit. SUCCEEDED means program returned, not whole-part acceptance.
     """
-    return engine.status(request_id)
+    return content_for_status(await engine.wait_status(request_id, wait_ms), include_feedback)
 
 
 @mcp.tool()

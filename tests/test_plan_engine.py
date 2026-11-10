@@ -88,6 +88,19 @@ class Plans(unittest.TestCase):
         value=normalize('tool',{'isError':True,'structuredContent':{'ok':False,'code':'COM_ERROR','message':'-2147467259, RPC_E_DISCONNECTED -2147417848','effects':{'modified':None}}})
         self.assertEqual(value['completion'],'UNCERTAIN')
 
+    def test_no_active_document_query_is_known_precondition_only(self):
+        tool='catia_get_active_document_info'
+        raw={'isError':True,'structuredContent':{'ok':False,'code':'COM_ERROR','tool':tool,
+             'message':'No active document in CATIA. Create or open a document first.',
+             'data':{'failure_stage':'execute'},'effects':{'modified':None}}}
+        r=normalize(tool,raw)
+        self.assertEqual(r['completion'],'KNOWN_FINISHED')
+        self.assertFalse(r['effects']['modified'])
+        self.assertTrue(r['completion_evidence'])
+        self.assertEqual(normalize('catia_pad',raw)['completion'],'UNCERTAIN')
+        raw['structuredContent']['message']+=' RPC_E_DISCONNECTED'
+        self.assertEqual(normalize(tool,raw)['completion'],'UNCERTAIN')
+
     def test_restart_reconciles_only_matching_stored_terminal_error(self):
         self.engine.dispatch = lambda n,a: {'isError':True,'structuredContent':{'ok':False,'code':'COM_ERROR','message':'bound HRESULT -2147467259','effects':{'modified':None}}}
         # Simulate the older version's classification; preserve its raw result.

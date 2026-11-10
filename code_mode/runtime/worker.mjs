@@ -59,7 +59,7 @@ const boot = `
   const mcp = Object.freeze({call: async (server, tool, args = {}) => {
     const wire = await call(JSON.stringify({server, tool, arguments:args}));
     const reply = JSON.parse(wire);
-    if (!reply.ok) throw new Error(reply.error || 'MCP_CALL_FAILED');
+    if (!reply.ok) throw new Error((reply.error || 'MCP_CALL_FAILED') + (reply.error_detail ? ': ' + reply.error_detail : ''));
     return reply;
   }});
   const tables = ${JSON.stringify(spec.tools)};
