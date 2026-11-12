@@ -116,6 +116,41 @@ class Plans(unittest.TestCase):
         self.assertEqual(record['results'][0]['completion'],'UNCERTAIN')
         self.assertEqual(restored.gate.snapshot()['status'],'IDLE')
 
+    def test_exact_no_active_sketch_read_is_finished_not_success(self):
+        tool='catia_sketch_get_geometry'
+        data={'ok':False,'code':'COM_ERROR','tool':tool,
+              'message':'No active sketch. Use catia_create_sketch first to open a sketch.',
+              'data':{'failure_stage':'execute'},'effects':{'modified':None}}
+        raw={'isError':True,'structuredContent':data}
+        r=normalize(tool,raw)
+        self.assertFalse(r['ok'])
+        self.assertEqual(r['completion'],'KNOWN_FINISHED')
+        self.assertEqual(r['effects'],{'modified':False})
+        self.assertEqual(r['completion_evidence'],{'precondition':'NO_ACTIVE_SKETCH_READ_ONLY'})
+        self.assertEqual(normalize('catia_sketch_circle',raw)['completion'],'UNCERTAIN')
+        altered=json.loads(json.dumps(raw));altered['structuredContent']['message']+=' extra'
+        self.assertEqual(normalize(tool,altered)['completion'],'UNCERTAIN')
+        altered=json.loads(json.dumps(raw));altered['structuredContent']['data']={'failure_stage':'unknown'}
+        self.assertEqual(normalize(tool,altered)['completion'],'UNCERTAIN')
+        altered=json.loads(json.dumps(raw));altered['content']=[{'type':'text','text':'RPC_E_DISCONNECTED -2147417848'}]
+        self.assertEqual(normalize(tool,altered)['completion'],'UNCERTAIN')
+
+    def test_no_active_sketch_read_stops_plan_without_freezing_or_replay(self):
+        tool='catia_sketch_get_geometry'
+        self.engine.validate=lambda n,a:None
+        self.engine.dispatch=lambda n,a:{'isError':True,'structuredContent':{
+            'ok':False,'code':'COM_ERROR','tool':tool,
+            'message':'No active sketch. Use catia_create_sketch first to open a sketch.',
+            'data':{'failure_stage':'execute'}}}
+        steps=[{'id':'read','tool':tool},{'id':'never','tool':'catia_pad'}]
+        r=self.engine.run('no-sketch',steps)
+        self.assertEqual(r['status'],'FAILED')
+        self.assertEqual(r['skipped_steps'],['never'])
+        self.assertEqual(len(r['results']),1)
+        self.assertEqual(self.engine.gate.snapshot()['status'],'IDLE')
+        self.engine.dispatch=lambda n,a:self.fail('must not replay')
+        self.assertTrue(self.engine.run('no-sketch',steps)['cached_no_CAD_dispatch'])
+
     def test_exception_after_dispatch_preserves_uncertainty(self):
         def crash(n, a): raise TimeoutError('fixture')
         self.engine.dispatch = crash

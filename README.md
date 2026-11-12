@@ -95,6 +95,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 
 ## 文档与来源
 
+- [复杂轮毂、顶盖、翼子板 PTC 对照评测（2026-11-12）](code_mode/EVALUATION-20261112.md)
 - [WebUI 与 Electron 使用说明](WEBUI-070.md)
 - [0.7.0 开发说明](docs/DEVELOPMENT-0.7.0.md)
 - [2026年10月31日工作日志](docs/worklogs/2026-10-31.md)
