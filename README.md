@@ -8,6 +8,8 @@
 
 新增 [CATIA Code Mode / 程序化工具调用](code_mode/README.md)：AI 编写 JavaScript，在 QuickJS WebAssembly 中通过可信宿主调用原有 MCP；支持循环、条件判断、结果筛选和精简返回。Codex 默认改为三个程序入口，亦可直接运行代码文件。独立扩展0.2.0 / Skill0.2.0，新增绑定候选截图及量测错误反馈；真实对照见[PTC评测](code_mode/EVALUATION-20261110.md)。已用真实 Codex 与 CATIA 验证六孔凸台板保存/重开；它实现的是代码编排，区别于上面的配置迁移。现有0.7.0 WebUI 的 OpenCode 后端保留。
 
+新增 [现有零件自然语言修改PTC对照评测](code_mode/EVALUATION-20261114.md)：轮毂、顶盖与翼子板的尺寸/体积/开口/辐条/曲率编辑、歧义及辅助反馈；分别记录候选几何与自主交付成绩。实际Codex会话，生产WebUI保持不变。
+
 新增 [CATIA 内嵌工作区实验原型](embedded/README.md)：原生 WebView2 宿主已编译并完成独立宿主图文/MCP 联通验证，CAA 工具栏及内部 MDI 面板候选源码已提供。当前缺少匹配 CAA SDK/RADE，**尚未在 CATIA 加载，不能作为可用内嵌工作台安装**；0.7.0 安装版和 Release 保持不变。
 
 在插件中输入文字、粘贴图片或附加文件，使用 OpenCode 的连续会话与工具完成 CAD 辅助工作。核心能力是把自然语言需求转成 CATIA 原生 CATScript 宏，执行后保存、重新打开并核对实际结果。
