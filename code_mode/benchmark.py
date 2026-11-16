@@ -46,6 +46,7 @@ async def benchmark(config_path,node,output,repeats=3):
      rows.append(row)
      print(encode(row),flush=True)
      (output/'measurements.json').write_text(json.dumps({'shared_connection_startup_ms':startup_ms,'repeats':repeats,'rows':rows,'model_inference':False,'CAD_dispatch':False},indent=2),encoding='utf-8')
+  await engine.aclose()
  return rows
 
 if __name__=='__main__':

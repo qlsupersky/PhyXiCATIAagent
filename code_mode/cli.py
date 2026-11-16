@@ -10,16 +10,19 @@ from engine import Engine, load_config
 async def main(args):
     config = load_config(args.backends)
     engine = Engine(config['catia-v5']['env']['PHYXI_NATIVE_WORKSPACE'], config, args.node)
-    if args.action == 'status':
-        result = engine.status(args.request_id)
-    elif args.action == 'catalog':
-        result = await engine.catalog(args.server, args.names)
-    else:
-        result = await engine.start(args.request_id, args.file.read_text(encoding='utf-8-sig'))
-        if engine.tasks:
-            await asyncio.gather(*engine.tasks)
+    try:
+        if args.action == 'status':
             result = engine.status(args.request_id)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+        elif args.action == 'catalog':
+            result = await engine.catalog(args.server, args.names)
+        else:
+            result = await engine.start(args.request_id, args.file.read_text(encoding='utf-8-sig'))
+            if engine.tasks:
+                await asyncio.gather(*engine.tasks)
+                result = engine.status(args.request_id)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    finally:
+        await engine.aclose()
 
 
 if __name__ == '__main__':

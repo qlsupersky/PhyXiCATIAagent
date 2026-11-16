@@ -16,6 +16,7 @@ from jsonschema import validate
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from feedback import native_feedback, finalize_feedback
+from backend_session import BackendSession
 
 SERVERS = ('native-modeling', 'catia-v5')
 ALIASES = {'native_modeling': 'native-modeling', 'catia_v5': 'catia-v5'}
@@ -53,6 +54,12 @@ def project(raw):
         if isinstance(plan, dict):
             uncertain = uncertain or plan.get('completion') == 'UNCERTAIN'
             ok = ok and plan.get('status') == 'SUCCEEDED'
+            for result in plan.get('results', []):
+                child = project({'structuredContent': result.get('data')})
+                if not child['ok']:
+                    if uncertain:
+                        child.update(uncertain=True, error='UPSTREAM_UNCERTAIN')
+                    return child
             if len(plan.get('results', [])) == 1 and not plan['steps'][0]['tool'].startswith('catia_plan_'):
                 data = plan['results'][0]['data']
         # Older native failure responses may omit state but carry passed=false.
@@ -62,7 +69,12 @@ def project(raw):
             ok = ok and (data.get('reopened_readback') or {}).get('passed', True) is not False
         if isinstance(data, dict) and set(data) == {'text'}:
             data = decode_text(data['text'])
-    if isinstance(data, str) and re.match(r'^\s*(error\b|failed\b|exception\b)', data, re.I):
+    if isinstance(data, dict):
+        ok = ok and data.get('ok', True) is not False
+        nested_state = data.get('state', data.get('status'))
+        uncertain = uncertain or data.get('completion') == 'UNCERTAIN' or nested_state in ('UNCERTAIN', 'FROZEN')
+        ok = ok and nested_state not in ('FAILED', 'FROZEN', 'UNCERTAIN', 'REJECTED_BUSY')
+    if isinstance(data, str) and re.match(r'^\s*(error\b|failed\b|exception\b|Could not enumerate (?:faces|edges):)', data, re.I):
         ok = False
     detail = None
     if not ok:
@@ -116,8 +128,14 @@ class Engine:
         self.worker = Path(worker or Path(__file__).parent / 'runtime/worker.mjs').resolve()
         self.backend_factory = backend_factory
         self.tasks = set()
+        self.backends = BackendSession(backend_factory, config, self.root / ('session-' + uuid.uuid4().hex))
         with self.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,digest TEXT NOT NULL,record TEXT NOT NULL)')
+
+    async def aclose(self):
+        if self.tasks:
+            await asyncio.gather(*list(self.tasks))
+        await self.backends.aclose()
 
     @contextmanager
     def connect(self):
@@ -153,6 +171,8 @@ class Engine:
             await asyncio.sleep(min(.1, remaining))
 
     async def start(self, request_id, code):
+        if self.backends.closed:
+            raise RuntimeError('Engine is closed')
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,100}', request_id or ''):
             raise ValueError('Invalid request_id')
         if not isinstance(code, str) or not 0 < len(code.encode('utf-8')) <= 65536:
@@ -163,7 +183,7 @@ class Engine:
             'completion': 'NOT_YET_KNOWN', 'no_replay': True, 'code': code,
             'evidence_directory': str(self.root / request_id), 'runner_pid': os.getpid(),
             'geometry_verified': False, 'started_at': time.time(),
-            'version': '0.2.0', 'backend_ms': 0, 'startup_ms': 0}
+            'version': '0.3.0', 'backend_ms': 0, 'startup_ms': 0}
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             prior = db.execute('SELECT digest FROM runs WHERE id=?', (request_id,)).fetchone()
@@ -188,7 +208,7 @@ class Engine:
             raise ValueError('Unknown server')
         if not isinstance(names, list) or len(names) > 12:
             raise ValueError('Select up to 12 tool schemas')
-        async with self.backend_factory(self.config, self.root) as backends:
+        async with self.backends as backends:
             entries = backends.schemas[server]
             if names:
                 return {'server': server, 'tools': [entries[n] for n in names]}
@@ -201,7 +221,10 @@ class Engine:
         stopped = False
         startup = time.perf_counter()
         try:
-            async with self.backend_factory(self.config, folder) as backends:
+            async with self.backends as backends:
+                record['backend_session_id'] = backends.session_id
+                record['backend_session_reused'] = backends.leases > 1
+                record['backend_session_evidence'] = str(backends.folder)
                 record['startup_ms'] = round((time.perf_counter() - startup) * 1000, 3)
                 # No secrets, files, sockets or processes are injected into guest.
                 # Node is trusted runtime; its environment is also minimized.

@@ -42,6 +42,9 @@ class CodeModeTests(unittest.IsolatedAsyncioTestCase):
         FakeBackends.max_active = FakeBackends.active = 0
         self.engine = Engine(self.tmp.name, {}, NODE, backend_factory=FakeBackends)
 
+    async def asyncTearDown(self):
+        await self.engine.aclose()
+
     async def run_program(self, code, name='test'):
         await self.engine.start(name, code)
         await asyncio.wait_for(asyncio.gather(*self.engine.tasks), 45)

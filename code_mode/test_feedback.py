@@ -86,6 +86,7 @@ class ReadOnlyStatusTests(unittest.IsolatedAsyncioTestCase):
     async def test_completed_read_does_not_become_unknown_dispatch(self):
         with tempfile.TemporaryDirectory() as folder:
             engine=Engine(folder,{},os.environ.get('PHYXI_PTC_TEST_NODE') or shutil.which('node'),backend_factory=StatusBackend)
+            self.addAsyncCleanup(engine.aclose)
             await engine.start('observe','await tools.native_modeling.modeling_status({});')
             await asyncio.gather(*engine.tasks)
             r=engine.status('observe')

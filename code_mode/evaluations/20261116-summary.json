@@ -1,0 +1,35 @@
+{
+  "version": "0.3.0",
+  "CodeMode_tests": 40,
+  "migration_tests": 8,
+  "natural_language_trials_this_update": 0,
+  "three_readonly_timing_repeats": {
+    "old": {
+      "catalog-0": 2447.2011999998813,
+      "catalog-1": 2530.548999999837,
+      "program-0": 2796.2012000000414,
+      "program-1": 2806.880900000124,
+      "warm_programs": 2801.5410500000826
+    },
+    "new": {
+      "catalog-0": 2439.273299999968,
+      "catalog-1": 0.00940000018090359,
+      "program-0": 251.04830000009315,
+      "program-1": 263.3562000000893,
+      "warm_programs": 257.2022500000912
+    }
+  },
+  "readonly_short_program_overhead_reduction_percent": 90.8192582079037,
+  "real_CAD_cross_program_sketch": "PASS",
+  "independent_selected_geometry_checks": 8,
+  "source_parameters_preserved": 236,
+  "source_XYZ_preserved": 147,
+  "not_full_8task_rebenchmark": true,
+  "production_webui": "0.7.0 / OpenCode unchanged",
+  "remaining": [
+    "distance unit/name calibration",
+    "circular pattern geometry root cause",
+    "cross-kernel surface volume difference",
+    "full natural-language rebenchmark"
+  ]
+}

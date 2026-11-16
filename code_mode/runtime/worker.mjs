@@ -71,8 +71,19 @@ const boot = `
   }
   Object.freeze(tools);
   const assert = (test, message = 'assertion failed') => {if (!test) throw new Error(message);};
+  const cad = Object.freeze({
+    near(actual, expected, {abs, rel}) {
+      for (const x of [actual, expected, abs, rel])
+        if (typeof x !== 'number' || !Number.isFinite(x)) throw Error('cad.near requires finite numbers and explicit abs/rel');
+      if (abs < 0 || rel < 0) throw Error('cad.near tolerances must be nonnegative');
+      const delta = Math.abs(actual - expected);
+      const limit = Math.max(abs, rel * Math.max(Math.abs(actual), Math.abs(expected)));
+      if (!Number.isFinite(delta) || !Number.isFinite(limit)) throw Error('cad.near arithmetic overflow');
+      return {passed: delta <= limit, actual, expected, delta, limit};
+    }
+  });
   // Async return value is the ONLY final payload; intermediates stay in guest.
-  (async (tools, mcp, assert) => { "use strict";\n${spec.code}\n})(tools,mcp,assert)
+  (async (tools, mcp, assert, cad) => { "use strict";\n${spec.code}\n})(tools,mcp,assert,cad)
     .then(value => done(JSON.stringify(value === undefined ? null : value)))
     .catch(error => failed(String(error)));
 })();`;

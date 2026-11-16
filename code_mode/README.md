@@ -1,4 +1,4 @@
-# CATIA Code Mode / PTC（扩展0.2.0）
+# CATIA Code Mode / PTC（扩展0.3.0）
 
 这次扩展实现“AI 写程序 → 运行时调用 MCP → 程序筛选结果 → 只返回摘要”。它与仅把 MCP 配置迁入 Codex 不同，也不把固定 JSON 工具列表包装成代码。JavaScript 可以根据工具结果循环、分支、断言、计算参数及生成 CATIA 原生宏。
 
@@ -12,9 +12,17 @@ Python broker（schema 校验、日志、去重）
         ↑ 完整结果在本地；代码只 return 精炼结果给模型
 ```
 
+## 0.3.0：基于零件修改失败的优化
+
+[独立原因分析](CAUSES-20261116.md)与[优化及验证](OPTIMIZATION-20261116.md)分别记录已证实原因和改进结果。后端与schema现在在同一服务生命周期复用，保留跨程序草图句柄；专属任务顺序派发，正确管理MCP上下文。传输断连不重连、不重放。CLI每次运行仍是独立生命周期；不要用多个CLI命令跨进程维持开放草图。
+
+执行默认最多异步等待20秒，可设wait_ms=0立即返回；仍只暴露三个工具。新增纯计算`cad.near(actual,expected,{abs,rel})`，以max(abs, rel×max(|actual|,|expected|))比较有限数值，返回passed/delta/limit。abs与rel均须显式指定，容差和单位按原设计要求确定；helper不等于几何验收。嵌套业务失败及已观察的面/边枚举失败文本会阻止后续派发并保留诊断。
+
+生产WebUI仍为0.7.0/OpenCode，独立扩展更新不改变其模型、凭据或工作流。冷启动仍需启动两套后端，持久连接也不是跨调用原子锁；完整草图操作优先合并在单个plan。
+
 ## 两种使用入口
 
-**MCP facade** 只暴露三个工具：`ptc_catalog(server,names)` 查找内层工具、`ptc_execute(request_id,code)` 一次提交程序、`ptc_status(request_id)` 查询进度/最终结果。已有的104个业务工具不再作为模型逐步调用的接口暴露。外层程序提交仍可走 MCP 协议，这是代码执行入口，不代表底层取消了 MCP 请求。
+**MCP facade** 只暴露三个工具：`ptc_catalog(server,names)` 查找内层工具、`ptc_execute(request_id,code,wait_ms=20000)` 一次提交程序、`ptc_status(request_id)` 查询进度/最终结果。已有的104个业务工具不再作为模型逐步调用的接口暴露。外层程序提交仍可走 MCP 协议，这是代码执行入口，不代表底层取消了 MCP 请求。
 
 **CLI 直接运行代码文件** 不要求模型提交结构化工具调用：模型写好 `.js`，用一次终端命令运行 `cli.py run`。运行时内部仍作为 MCP 客户端使用原服务器。CLI 和 facade 共享任务日志、去重和不确定状态阻断。
 
@@ -32,7 +40,7 @@ return {ready:busy.length===0, observed:gates};
 
 ## 安装
 
-要求 Windows、Node.js（本机验证v20.11.0）、Python3.12与现有两套可用 CATIA MCP。项目整体安装版仍为0.7.0，此处为独立 Code Mode 扩展0.2.0、Skill0.2.0（说明已补充反馈流程）。
+要求 Windows、Node.js（本机验证v20.11.0）、Python3.12与现有两套可用 CATIA MCP。项目整体安装版仍为0.7.0，此处为独立 Code Mode 扩展0.3.0、Skill0.3.0（说明已补充反馈流程）。
 
 ```powershell
 python -m pip install -r code_mode/requirements.txt
@@ -51,7 +59,7 @@ python code_mode/install.py --source C:/path/to/opencode.json --node C:/path/to/
 python code_mode/install.py --rollback C:/path/to/ptc-install.json
 ```
 
-修改后创建新的 Codex 会话；旧会话可能需要重启应用才能刷新工具。不要同时启用旧的直接104工具注册和 Code Mode 注册来验证“三工具入口”。Skill 在 `codex/plugins/phyxi-catia`，安装/更新后应为0.2.0；如果此前启用了自带 MCP 的替代插件，应先切换到 skill-only 安装，防止重复注册。
+修改后创建新的 Codex 会话；旧会话可能需要重启应用才能刷新工具。不要同时启用旧的直接104工具注册和 Code Mode 注册来验证“三工具入口”。Skill 在 `codex/plugins/phyxi-catia`，安装/更新后应为0.3.0；如果此前启用了自带 MCP 的替代插件，应先切换到 skill-only 安装，防止重复注册。
 
 CLI示例（把路径替换为实际安装）：
 
@@ -82,10 +90,10 @@ python code_mode/cli.py --backends C:/path/to/backends.json --node C:/path/to/no
 ```powershell
 $env:PHYXI_PTC_TEST_NODE='C:/path/to/node.exe'
 cd code_mode
-python -m unittest -v test_engine test_install test_feedback
+python -m unittest -v test_engine test_install test_feedback test_optimization
 ```
 
-31项测试覆盖循环/分支/聚合、去重、失败停止、未知阻断、schema、CPU/内存/输出/调用上限、Guest不可访问Node、Promise串行、未await报错、安装配置保留、回滚冲突，以及绑定截图、空读回、截图篡改、只读观测分类、具体上游错误保留和异步等待。真实 Codex/CATIA 结果见 [VALIDATION.md](VALIDATION.md)及[PTC对照评测](EVALUATION-20261110.md)。不将引用文章的token或基准提升比例当作本项目实测。
+40项测试覆盖循环/分支/聚合、去重、失败停止、未知阻断、schema、CPU/内存/输出/调用上限、Guest不可访问Node、Promise串行、未await报错、安装配置保留、回滚冲突，以及绑定截图、空读回、截图篡改、只读观测分类、具体上游错误保留和异步等待。真实 Codex/CATIA 结果见 [VALIDATION.md](VALIDATION.md)及[PTC对照评测](EVALUATION-20261110.md)。不将引用文章的token或基准提升比例当作本项目实测。
 
 建议把状态检查、执行及结果筛选放入同一个程序；首次只发现所需schema。可用`ptc_status(request_id, wait_ms=20000, include_feedback=true)`异步等待最多20秒以减少模型反复轮询。默认等待0毫秒，不改变CAD状态或重发请求。失败时`upstream_failure.message`保留最多1200字符的具体上游原因，供模型修改新候选。新功能可减少诊断障碍，但不能把修复前实验耗时改写为修复后的成绩。
 
