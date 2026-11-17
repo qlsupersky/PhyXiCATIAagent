@@ -78,6 +78,15 @@ class WebTests(unittest.TestCase):
         value=present([{'id':'u','type':'user','text':'hi','files':[{'name':'x.png','data':'secret-binary'}]}])
         self.assertNotIn('secret-binary',json.dumps(value))
 
+    def test_ptc_view_uses_bound_input_not_assistant_prose(self):
+        rows=[{'id':'a','type':'assistant','content':[{'type':'text','text':'made-up code'},
+            {'id':'t','type':'tool','name':'execute','state':{'status':'completed','metadata':{'toolCalls':[
+                {'tool':'catia-code.ptc_execute','input':{'request_id':'real-01','code':'return {actual: true};','api_key':'hidden'}},
+                {'tool':'other.lookup','input':{'code':'not-ptc','secret':'hidden'}}]}}}]}]
+        programs=present(rows)['tools'][0]['programs']
+        self.assertEqual(programs,[{'tool':'catia-code.ptc_execute','request_id':'real-01','code':'return {actual: true};'}])
+        self.assertNotIn('hidden',json.dumps(programs))
+
     def test_refresh_consumed_by_other_frontend_settles_exact_receipt_only(self):
         evidence=self.root/'turn';evidence.mkdir()
         (evidence/'result.json').write_text(json.dumps({'session':'ses_web','message_id':'msg_web','outcome':'succeeded'}))

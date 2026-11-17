@@ -33,8 +33,14 @@ def present(rows):
                     try: feedback = json.loads(text)
                     except ValueError: pass
                 calls = state.get('metadata', {}).get('toolCalls', [])
+                # Show the actual submitted PTC body, never reconstruct it from prose.
+                programs = [{'tool': c.get('tool', ''), 'request_id': c['input'].get('request_id'),
+                             'code': c['input']['code']} for c in calls
+                            if c.get('tool', '').endswith('.ptc_execute')
+                            and isinstance(c.get('input'), dict) and isinstance(c['input'].get('code'), str)]
                 tools.append({'id': part.get('id', row['id']), 'name': ', '.join(c.get('tool', '') for c in calls) or part.get('name', 'tool'),
-                              'status': state.get('status', ''), 'text': str(text), 'feedback': feedback})
+                              'status': state.get('status', ''), 'text': str(text), 'feedback': feedback,
+                              'programs': programs})
     return {'messages': messages, 'tools': tools}
 
 

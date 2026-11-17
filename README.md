@@ -4,6 +4,8 @@
 
 0.7.0 新增本地 WebUI、Electron 桌面工作台、保留原工具的多步骤 MCP 扩展及逐步结果反馈。安装与使用见 [WEBUI-070.md](WEBUI-070.md)。0.7.0 已作为预发布版本提供；开发与验证完成于 2026-10-31，公开同步于 2026-11-02。
 
+新增 [WebUI + GLM-5.3-Flash 程序编排入口](WEBUI-PTC-GLM.md)：在原有 WebUI 会话中由 GLM 编写 PTC JavaScript，通过 Code Mode0.3.0 调用 CATIA，无需 Codex 原生界面。已完成轮毂参数修改、保存重开与 STEP 导出；原 0.7.0 Release 保留。
+
 新增 [Codex MCP 与原生 Skill / Plugin 接入](codex/README.md)：支持迁移现有两套 MCP，或生成自带 MCP 的 Codex 插件；已完成真实 Codex 客户端连接及四孔板原生宏保存/重开验证。该扩展独立版本为0.1.0，现有 WebUI 仍保留 OpenCode。
 
 新增 [CATIA Code Mode / 程序化工具调用](code_mode/README.md)：AI 编写 JavaScript，在 QuickJS WebAssembly 中通过可信宿主调用原有 MCP；支持循环、条件判断、结果筛选和精简返回。Codex 默认改为三个程序入口，亦可直接运行代码文件。独立扩展0.3.0 / Skill0.3.0，新增绑定候选截图及量测错误反馈；真实对照见[PTC评测](code_mode/EVALUATION-20261110.md)。已用真实 Codex 与 CATIA 验证六孔凸台板保存/重开；它实现的是代码编排，区别于上面的配置迁移。现有0.7.0 WebUI 的 OpenCode 后端保留。

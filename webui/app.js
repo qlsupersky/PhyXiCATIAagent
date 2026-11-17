@@ -63,6 +63,10 @@ function render(state) {
     for(const tool of state.tools||[]) {
       const card=element('div',undefined,'tool'),title=element('div',undefined,'tool-title');
       title.append(element('strong',tool.name),element('span',tool.status));card.append(title);
+      for(const program of tool.programs||[]) {
+        const source=element('details');source.open=true;
+        source.append(element('summary','实际 PTC 编排程序 · '+(program.request_id||'')),element('pre',program.code));card.append(source);
+      }
       const plan=tool.feedback?.plan;
       if(plan?.results)for(const result of plan.results){card.append(element('div',result.step+' · '+result.tool+' · '+result.code,'step'));card.append(element('div','核验：'+result.verification.status+' / 完成：'+result.completion,'check'));}
       const detail=element('details'); detail.append(element('summary','查看实际工具返回'),element('pre',tool.text));card.append(detail);$('tools').append(card);
